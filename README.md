@@ -37,7 +37,7 @@ Below is a brief explanation of what is in this repo:
      * associated ride sharing API and stage (prod);
      * add the `ride-sharing` API key to the Usage Plan;
   * configure each method that you want to protect with an API key to require one;
-* *Authorizer:* `template.yaml` creates a Cognito User Pool called `riders`. In order to start using it to protect the API, the following remains to be done:
+* *Authorizer:* `template.yaml` creates a Cognito User Pool called `riders`. It also creates an authorizer in the API that refers to the pool. Moreover, a test client is created that can request tokens. In order to start using it to protect the API, the following remains to be done:
   * configure a domain for the User Pool;
   * define clients that can request tokens;
   * define resource servers that will consume access tokens;

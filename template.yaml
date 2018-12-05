@@ -121,11 +121,76 @@ Resources:
         Type: AWS::Serverless::Api
         Properties:
           StageName: prod
+          # Auth:
+          #   DefaultAuthorizer: AuthZr
+          #   Authorizers:
+          #     AuthZr:
+          #       UserPoolArn: !GetAtt UserPool.Arn
+          # MethodSettings:
+          #   - HttpMethod: GET
+          #     ResourcePath: /~1rides
+          #     ThrottlingBurstLimit: 20
           DefinitionBody:
-            'Fn::Transform':
-              Name: 'AWS::Include'
-              Parameters:
-                Location: ./openapi.yaml
+            swagger: 2.0
+            info:
+              title: Ride sharing API
+              version: 0.0.1
+            paths:
+              /rides:
+                get:
+                  responses:
+                    '200':
+                      description: A JSON array of rides
+                  x-amazon-apigateway-integration:
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListRidesFunction.Arn}/invocations
+                    httpMethod: POST
+                    type: aws_proxy
+                post:
+                  responses:
+                    '201':
+                      description: ride created
+                  x-amazon-apigateway-integration:
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
+                    httpMethod: POST
+                    type: aws_proxy
+              /rides/{rideID}:
+                get:
+                  responses:
+                    '200':
+                      description: Ride details
+                  x-amazon-apigateway-integration:
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReadRideFunction.Arn}/invocations
+                    httpMethod: POST
+                    type: aws_proxy
+                put:
+                  responses:
+                    '200':
+                      description: Update ride
+                  x-amazon-apigateway-integration:
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRideFunction.Arn}/invocations
+                    httpMethod: POST
+                    type: aws_proxy
+                delete:
+                  responses:
+                    '200':
+                      description: Delete ride
+                  x-amazon-apigateway-integration:
+                    uri:
+                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteRideFunction.Arn}/invocations
+                    httpMethod: POST
+                    type: aws_proxy
+                parameters:
+                  - in: path
+                    name: rideID
+                    required: true
+            # 'Fn::Transform':
+            #   Name: 'AWS::Include'
+            #   Parameters:
+            #     Location: ./openapi.yaml
 
     ApiKey:
       Type: AWS::ApiGateway::ApiKey
@@ -136,7 +201,43 @@ Resources:
           - RestApiId: !Ref RideSharingApi
             StageName: prod
 
-    Userpool:
+    UserPool:
       Type: AWS::Cognito::UserPool
       Properties:
         UserPoolName: riders
+
+    TestClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: test-client
+        GenerateSecret: true
+        UserPoolId: !Ref UserPool
+
+    Authorizer:
+      Type: AWS::ApiGateway::Authorizer
+      Properties:
+        Type: COGNITO_USER_POOLS
+        RestApiId: !Ref RideSharingApi
+        ProviderARNs:
+          - !GetAtt UserPool.Arn
+        Name: AuthZr
+        IdentitySource: method.request.header.Authorization
+
+    Create:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: true
+        AuthorizationScopes:
+          - rides/create
+        AuthorizationType: CUSTOM
+        AuthorizerId: !Ref Authorizer
+        HttpMethod: POST
+        Integration:
+          IntegrationHttpMethod: POST
+          Type: AWS_PROXY
+          Uri: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
+        ResourceId:
+          !GetAtt
+            - RideSharingApi
+              RootResourceId
+        RestApiId: !Ref RideSharingApi
