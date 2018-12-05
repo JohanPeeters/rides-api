@@ -1,0 +1,11 @@
+{
+  "name": "shared-rides",
+  "version": "0.0.1",
+  "description": "the backend API for a shared rides application",
+  "author": "Johan Peeters",
+  "license": "MIT",
+  "dependencies": {
+    "aws-sdk": "^2.361.0",
+    "uuid": "^3.3.2"
+  }
+}

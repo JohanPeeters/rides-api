@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+    rides-api
+
+    SAM Template for rides-api
+
+Globals:
+    Function:
+        Timeout: 3
+
+
+Resources:
+
+    CreateRideFunction:
+      Type: AWS::Serverless::Function
+      Properties:
+        CodeUri: ride_sharing/
+        Handler: create.lambdaHandler
+        Runtime: nodejs8.10
+        Events:
+          CreateRide:
+              Type: Api
+              Properties:
+                  Path: /rides
+                  Method: post
+                  RestApiId: !Ref RideSharingApi
+        Policies:
+          DynamoDBCrudPolicy:
+            TableName: !Ref RidesTable
+        Environment:
+          Variables:
+            TABLE_NAME: !Ref RidesTable
+
+    ListRidesFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: ride_sharing/
+            Handler: list.lambdaHandler
+            Runtime: nodejs8.10
+            Events:
+                ListRides:
+                    Type: Api
+                    Properties:
+                        Path: /rides
+                        Method: get
+                        RestApiId: !Ref RideSharingApi
+            Policies:
+              DynamoDBReadPolicy:
+                TableName: !Ref RidesTable
+            Environment:
+              Variables:
+                TABLE_NAME: !Ref RidesTable
+
+    ReadRideFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: ride_sharing/
+            Handler: read.lambdaHandler
+            Runtime: nodejs8.10
+            Events:
+                ReadRide:
+                    Type: Api
+                    Properties:
+                        Path: /rides/{rideID}
+                        Method: get
+                        RestApiId: !Ref RideSharingApi
+            Policies:
+              DynamoDBReadPolicy:
+                TableName: !Ref RidesTable
+            Environment:
+              Variables:
+                TABLE_NAME: !Ref RidesTable
+
+
+    UpdateRideFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: ride_sharing/
+            Handler: update.lambdaHandler
+            Runtime: nodejs8.10
+            Events:
+                UpdateRide:
+                    Type: Api
+                    Properties:
+                        Path: /rides/{rideID}
+                        Method: put
+                        RestApiId: !Ref RideSharingApi
+            Policies:
+              DynamoDBCrudPolicy:
+                TableName: !Ref RidesTable
+            Environment:
+              Variables:
+                TABLE_NAME: !Ref RidesTable
+
+
+    DeleteRideFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: ride_sharing/
+            Handler: delete.lambdaHandler
+            Runtime: nodejs8.10
+            Events:
+                DeleteRide:
+                    Type: Api
+                    Properties:
+                        Path: /rides/{rideID}
+                        Method: delete
+                        RestApiId: !Ref RideSharingApi
+            Policies:
+              DynamoDBCrudPolicy:
+                TableName: !Ref RidesTable
+            Environment:
+              Variables:
+                TABLE_NAME: !Ref RidesTable
+
+    RidesTable:
+        Type: AWS::Serverless::SimpleTable
+
+    RideSharingApi:
+        Type: AWS::Serverless::Api
+        Properties:
+          StageName: prod
+          DefinitionBody:
+            'Fn::Transform':
+              Name: 'AWS::Include'
+              Parameters:
+                Location: ./openapi.yaml
+
+    ApiKey:
+      Type: AWS::ApiGateway::ApiKey
+      Properties:
+        Name: ride-sharing
+        Enabled: true
+        StageKeys:
+          - RestApiId: !Ref RideSharingApi
+            StageName: prod
+
+    Userpool:
+      Type: AWS::Cognito::UserPool
+      Properties:
+        UserPoolName: riders

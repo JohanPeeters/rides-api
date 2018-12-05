@@ -1,0 +1,58 @@
+openapi: 3.0.1
+info:
+  title: Ride sharing API
+  version: 0.0.1
+paths:
+  /rides:
+    get:
+      responses:
+        '200':
+          description: A JSON array of rides
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListRidesFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+    post:
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: ride created
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+  /rides/{rideID}:
+    get:
+      responses:
+        '200':
+          description: Ride details
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReadRideFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+    put:
+      responses:
+        '200':
+          description: Update ride
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRideFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
+    delete:
+      responses:
+        '200':
+          description: Delete ride
+      x-amazon-apigateway-integration:
+        uri:
+          Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteRideFunction.Arn}/invocations
+        httpMethod: POST
+        type: aws_proxy
