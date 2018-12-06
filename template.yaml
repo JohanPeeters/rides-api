@@ -18,13 +18,6 @@ Resources:
         CodeUri: ride_sharing/
         Handler: create.lambdaHandler
         Runtime: nodejs8.10
-        Events:
-          CreateRide:
-              Type: Api
-              Properties:
-                  Path: /rides
-                  Method: post
-                  RestApiId: !Ref RideSharingApi
         Policies:
           DynamoDBCrudPolicy:
             TableName: !Ref RidesTable
@@ -38,13 +31,6 @@ Resources:
             CodeUri: ride_sharing/
             Handler: list.lambdaHandler
             Runtime: nodejs8.10
-            Events:
-                ListRides:
-                    Type: Api
-                    Properties:
-                        Path: /rides
-                        Method: get
-                        RestApiId: !Ref RideSharingApi
             Policies:
               DynamoDBReadPolicy:
                 TableName: !Ref RidesTable
@@ -58,13 +44,6 @@ Resources:
             CodeUri: ride_sharing/
             Handler: read.lambdaHandler
             Runtime: nodejs8.10
-            Events:
-                ReadRide:
-                    Type: Api
-                    Properties:
-                        Path: /rides/{rideID}
-                        Method: get
-                        RestApiId: !Ref RideSharingApi
             Policies:
               DynamoDBReadPolicy:
                 TableName: !Ref RidesTable
@@ -79,13 +58,6 @@ Resources:
             CodeUri: ride_sharing/
             Handler: update.lambdaHandler
             Runtime: nodejs8.10
-            Events:
-                UpdateRide:
-                    Type: Api
-                    Properties:
-                        Path: /rides/{rideID}
-                        Method: put
-                        RestApiId: !Ref RideSharingApi
             Policies:
               DynamoDBCrudPolicy:
                 TableName: !Ref RidesTable
@@ -93,20 +65,12 @@ Resources:
               Variables:
                 TABLE_NAME: !Ref RidesTable
 
-
     DeleteRideFunction:
         Type: AWS::Serverless::Function
         Properties:
             CodeUri: ride_sharing/
             Handler: delete.lambdaHandler
             Runtime: nodejs8.10
-            Events:
-                DeleteRide:
-                    Type: Api
-                    Properties:
-                        Path: /rides/{rideID}
-                        Method: delete
-                        RestApiId: !Ref RideSharingApi
             Policies:
               DynamoDBCrudPolicy:
                 TableName: !Ref RidesTable
@@ -118,79 +82,17 @@ Resources:
         Type: AWS::Serverless::SimpleTable
 
     RideSharingApi:
-        Type: AWS::Serverless::Api
-        Properties:
-          StageName: prod
-          # Auth:
-          #   DefaultAuthorizer: AuthZr
-          #   Authorizers:
-          #     AuthZr:
-          #       UserPoolArn: !GetAtt UserPool.Arn
-          # MethodSettings:
-          #   - HttpMethod: GET
-          #     ResourcePath: /~1rides
-          #     ThrottlingBurstLimit: 20
-          DefinitionBody:
-            swagger: 2.0
-            info:
-              title: Ride sharing API
-              version: 0.0.1
-            paths:
-              /rides:
-                get:
-                  responses:
-                    '200':
-                      description: A JSON array of rides
-                  x-amazon-apigateway-integration:
-                    uri:
-                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListRidesFunction.Arn}/invocations
-                    httpMethod: POST
-                    type: aws_proxy
-                post:
-                  responses:
-                    '201':
-                      description: ride created
-                  x-amazon-apigateway-integration:
-                    uri:
-                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
-                    httpMethod: POST
-                    type: aws_proxy
-              /rides/{rideID}:
-                get:
-                  responses:
-                    '200':
-                      description: Ride details
-                  x-amazon-apigateway-integration:
-                    uri:
-                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReadRideFunction.Arn}/invocations
-                    httpMethod: POST
-                    type: aws_proxy
-                put:
-                  responses:
-                    '200':
-                      description: Update ride
-                  x-amazon-apigateway-integration:
-                    uri:
-                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRideFunction.Arn}/invocations
-                    httpMethod: POST
-                    type: aws_proxy
-                delete:
-                  responses:
-                    '200':
-                      description: Delete ride
-                  x-amazon-apigateway-integration:
-                    uri:
-                      Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteRideFunction.Arn}/invocations
-                    httpMethod: POST
-                    type: aws_proxy
-                parameters:
-                  - in: path
-                    name: rideID
-                    required: true
-            # 'Fn::Transform':
-            #   Name: 'AWS::Include'
-            #   Parameters:
-            #     Location: ./openapi.yaml
+      Type: AWS::ApiGateway::RestApi
+      Properties:
+        ApiKeySourceType: HEADER
+        Name: Ride sharing API
+
+    ProdStage:
+      Type: AWS::ApiGateway::Stage
+      Properties:
+        DeploymentId: !Ref Deployment
+        RestApiId: !Ref RideSharingApi
+        StageName: prod
 
     ApiKey:
       Type: AWS::ApiGateway::ApiKey
@@ -201,7 +103,25 @@ Resources:
           - RestApiId: !Ref RideSharingApi
             StageName: prod
 
-    UserPool:
+    UsagePlan:
+      Type: AWS::ApiGateway::UsagePlan
+      Properties:
+        ApiStages:
+          - ApiId: !Ref RideSharingApi
+            Stage: !Ref ProdStage
+        UsagePlanName: rides
+        Throttle:
+          BurstLimit: 20
+          RateLimit: 10
+
+    UsagePlanKey:
+      Type: AWS::ApiGateway::UsagePlanKey
+      Properties:
+        KeyId: !Ref ApiKey
+        KeyType: API_KEY
+        UsagePlanId: !Ref UsagePlan
+
+    AuthZSrv:
       Type: AWS::Cognito::UserPool
       Properties:
         UserPoolName: riders
@@ -211,33 +131,117 @@ Resources:
       Properties:
         ClientName: test-client
         GenerateSecret: true
-        UserPoolId: !Ref UserPool
+        UserPoolId: !Ref AuthZSrv
 
-    Authorizer:
+    Guard:
       Type: AWS::ApiGateway::Authorizer
       Properties:
         Type: COGNITO_USER_POOLS
         RestApiId: !Ref RideSharingApi
         ProviderARNs:
-          - !GetAtt UserPool.Arn
-        Name: AuthZr
+          - !GetAtt AuthZSrv.Arn
+        Name: Guard
         IdentitySource: method.request.header.Authorization
 
-    Create:
+    RidesCollection:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        ParentId: !GetAtt RideSharingApi.RootResourceId
+        PathPart: rides
+        RestApiId: !Ref RideSharingApi
+
+    Ride:
+      Type: AWS::ApiGateway::Resource
+      Properties:
+        ParentId: !Ref RidesCollection
+        PathPart: '{rideID}'
+        RestApiId: !Ref RideSharingApi
+
+    ListMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: true
+        AuthorizationType: NONE
+        HttpMethod: GET
+        Integration:
+          IntegrationHttpMethod: POST
+          Type: AWS_PROXY
+          Uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListRidesFunction.Arn}/invocations
+        ResourceId: !Ref RidesCollection
+        RestApiId: !Ref RideSharingApi
+
+    CreateMethod:
       Type: AWS::ApiGateway::Method
       Properties:
         ApiKeyRequired: true
         AuthorizationScopes:
           - rides/create
-        AuthorizationType: CUSTOM
-        AuthorizerId: !Ref Authorizer
+        AuthorizationType: COGNITO_USER_POOLS
+        AuthorizerId: !Ref Guard
         HttpMethod: POST
         Integration:
           IntegrationHttpMethod: POST
           Type: AWS_PROXY
-          Uri: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
-        ResourceId:
-          !GetAtt
-            - RideSharingApi
-              RootResourceId
+          Uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
+        ResourceId: !Ref RidesCollection
         RestApiId: !Ref RideSharingApi
+
+    ReadMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: true
+        AuthorizationType: NONE
+        HttpMethod: GET
+        Integration:
+          IntegrationHttpMethod: POST
+          Type: AWS_PROXY
+          Uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReadRideFunction.Arn}/invocations
+        ResourceId: !Ref Ride
+        RestApiId: !Ref RideSharingApi
+
+    UpdateMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: true
+        AuthorizationScopes:
+          - rides/update
+        AuthorizationType: COGNITO_USER_POOLS
+        AuthorizerId: !Ref Guard
+        HttpMethod: POST
+        Integration:
+          IntegrationHttpMethod: POST
+          Type: AWS_PROXY
+          Uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRideFunction.Arn}/invocations
+        ResourceId: !Ref Ride
+        RestApiId: !Ref RideSharingApi
+
+    DeleteMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: true
+        AuthorizationScopes:
+          - rides/delete
+        AuthorizationType: COGNITO_USER_POOLS
+        AuthorizerId: !Ref Guard
+        HttpMethod: POST
+        Integration:
+          IntegrationHttpMethod: POST
+          Type: AWS_PROXY
+          Uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteRideFunction.Arn}/invocations
+        ResourceId: !Ref Ride
+        RestApiId: !Ref RideSharingApi
+
+    Deployment:
+      DependsOn:
+        - CreateMethod
+        - ListMethod
+        - Guard
+      Type: AWS::ApiGateway::Deployment
+      Properties:
+        RestApiId: !Ref RideSharingApi
+        StageName: prod

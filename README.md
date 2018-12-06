@@ -1,8 +1,9 @@
-Caveat: work in progress
-
 # Rides API
 
-In this example, an API is set up with AWS Serverless Application Model (SAM).
+In this example, an access controlled API is set up with AWS Serverless Application Model (SAM).
+
+AWS SAM is a set of AWS CloudFormation macros to declare serverless resources. Unfortunately the macros do not extend to security infrastructure, so most of the declared resources are vanilla CloudFormation.
+
 Below is a brief explanation of what is in this repo:
 
 ```bash
@@ -18,7 +19,6 @@ Below is a brief explanation of what is in this repo:
 │   └── package-lock.json       <-- pinned dependencies
 ├── .gitignore
 ├── Makefile                    <-- contains targets to package and deploy
-├── openapi.yaml                <-- OpenAPI definition of the exposed API
 └── template.yaml               <-- SAM template
 ```
 
@@ -32,16 +32,9 @@ Below is a brief explanation of what is in this repo:
 
 ## Limitations
 
-* *API keys:* while a `ride-sharing` API key is created with `template.yaml`, there is no apparent way to declaratively associate this with resources and methods. While it is possible to define a CloudFormation Usage Plan resource, this is not included in this project's template. So, in order to protect the API with an API key, do the following:
-  * create a Usage Plan with
-     * associated ride sharing API and stage (prod);
-     * add the `ride-sharing` API key to the Usage Plan;
-  * configure each method that you want to protect with an API key to require one;
 * *Authorizer:* `template.yaml` creates a Cognito User Pool called `riders`. It also creates an authorizer in the API that refers to the pool. Moreover, a test client is created that can request tokens. In order to start using it to protect the API, the following remains to be done:
   * configure a domain for the User Pool;
-  * define clients that can request tokens;
-  * define resource servers that will consume access tokens;
-  * an Authorizer based on `riders` remains to be created. Protected methods also need to be configured to require a token with an appropriate scope issued by the User Pool.
+  * define resource servers that will consume access tokens with custom scopes.
 
 ## Setup process
 
