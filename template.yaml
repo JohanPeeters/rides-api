@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-    rides-api
+    ride sharing
 
     SAM Template for rides-api
 
@@ -51,7 +51,6 @@ Resources:
               Variables:
                 TABLE_NAME: !Ref RidesTable
 
-
     UpdateRideFunction:
         Type: AWS::Serverless::Function
         Properties:
@@ -93,6 +92,52 @@ Resources:
         DeploymentId: !Ref Deployment
         RestApiId: !Ref RideSharingApi
         StageName: prod
+        MethodSettings:
+          - HttpMethod: GET
+            ResourcePath: /~1rides
+          - HttpMethod: POST
+            ResourcePath: /~1rides
+          - HttpMethod: GET
+            ResourcePath: /~1rides~1{rideID}
+          - HttpMethod: PUT
+            ResourcePath: /~1rides~1{rideID}
+          - HttpMethod: DELETE
+            ResourcePath: /~1rides~1{rideID}
+
+    InvokeListFunctionPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref ListRidesFunction
+        Principal: apigateway.amazonaws.com
+
+    InvokeCreateFunctionPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref CreateRideFunction
+        Principal: apigateway.amazonaws.com
+
+    InvokeReadFunctionPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref ReadRideFunction
+        Principal: apigateway.amazonaws.com
+
+    InvokeUpdateFunctionPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref UpdateRideFunction
+        Principal: apigateway.amazonaws.com
+
+    InvokeDeleteFunctionPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref DeleteRideFunction
+        Principal: apigateway.amazonaws.com
 
     ApiKey:
       Type: AWS::ApiGateway::ApiKey
@@ -101,18 +146,18 @@ Resources:
         Enabled: true
         StageKeys:
           - RestApiId: !Ref RideSharingApi
-            StageName: prod
+            StageName: !Ref ProdStage
 
     UsagePlan:
       Type: AWS::ApiGateway::UsagePlan
       Properties:
-        ApiStages:
-          - ApiId: !Ref RideSharingApi
-            Stage: !Ref ProdStage
         UsagePlanName: rides
         Throttle:
           BurstLimit: 20
           RateLimit: 10
+        ApiStages:
+          - ApiId: !Ref RideSharingApi
+            Stage: !Ref ProdStage
 
     UsagePlanKey:
       Type: AWS::ApiGateway::UsagePlanKey
@@ -210,7 +255,7 @@ Resources:
           - rides/update
         AuthorizationType: COGNITO_USER_POOLS
         AuthorizerId: !Ref Guard
-        HttpMethod: POST
+        HttpMethod: PUT
         Integration:
           IntegrationHttpMethod: POST
           Type: AWS_PROXY
@@ -227,7 +272,7 @@ Resources:
           - rides/delete
         AuthorizationType: COGNITO_USER_POOLS
         AuthorizerId: !Ref Guard
-        HttpMethod: POST
+        HttpMethod: DELETE
         Integration:
           IntegrationHttpMethod: POST
           Type: AWS_PROXY
@@ -240,8 +285,9 @@ Resources:
       DependsOn:
         - CreateMethod
         - ListMethod
-        - Guard
+        - ReadMethod
+        - UpdateMethod
+        - DeleteMethod
       Type: AWS::ApiGateway::Deployment
       Properties:
         RestApiId: !Ref RideSharingApi
-        StageName: prod
