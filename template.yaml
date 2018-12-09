@@ -77,11 +77,19 @@ Resources:
               Variables:
                 TABLE_NAME: !Ref RidesTable
 
+    OptionsFunction:
+        Type: AWS::Serverless::Function
+        Properties:
+            CodeUri: ride_sharing/
+            Handler: options.lambdaHandler
+            Runtime: nodejs8.10
+
     RidesTable:
         Type: AWS::Serverless::SimpleTable
 
     RideSharingApi:
       Type: AWS::ApiGateway::RestApi
+      Description: Backend ride sharing API generated with CloudFormation
       Properties:
         ApiKeySourceType: HEADER
         Name: Ride sharing API
@@ -93,16 +101,9 @@ Resources:
         RestApiId: !Ref RideSharingApi
         StageName: prod
         MethodSettings:
-          - HttpMethod: GET
-            ResourcePath: /~1rides
-          - HttpMethod: POST
-            ResourcePath: /~1rides
-          - HttpMethod: GET
-            ResourcePath: /~1rides~1{rideID}
-          - HttpMethod: PUT
-            ResourcePath: /~1rides~1{rideID}
-          - HttpMethod: DELETE
-            ResourcePath: /~1rides~1{rideID}
+          - HttpMethod: '*'
+            ResourcePath: /*
+            LoggingLevel: INFO
 
     InvokeListFunctionPermission:
       Type: AWS::Lambda::Permission
@@ -110,6 +111,8 @@ Resources:
         Action: lambda:InvokeFunction
         FunctionName: !Ref ListRidesFunction
         Principal: apigateway.amazonaws.com
+        SourceArn:
+          Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}/*
 
     InvokeCreateFunctionPermission:
       Type: AWS::Lambda::Permission
@@ -117,6 +120,9 @@ Resources:
         Action: lambda:InvokeFunction
         FunctionName: !Ref CreateRideFunction
         Principal: apigateway.amazonaws.com
+        # SourceArn:
+        #   Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}
+
 
     InvokeReadFunctionPermission:
       Type: AWS::Lambda::Permission
@@ -124,6 +130,9 @@ Resources:
         Action: lambda:InvokeFunction
         FunctionName: !Ref ReadRideFunction
         Principal: apigateway.amazonaws.com
+        # SourceArn:
+        #   Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}
+
 
     InvokeUpdateFunctionPermission:
       Type: AWS::Lambda::Permission
@@ -131,6 +140,9 @@ Resources:
         Action: lambda:InvokeFunction
         FunctionName: !Ref UpdateRideFunction
         Principal: apigateway.amazonaws.com
+        # SourceArn:
+        #   Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}
+
 
     InvokeDeleteFunctionPermission:
       Type: AWS::Lambda::Permission
@@ -138,6 +150,15 @@ Resources:
         Action: lambda:InvokeFunction
         FunctionName: !Ref DeleteRideFunction
         Principal: apigateway.amazonaws.com
+        # SourceArn:
+        #   Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}
+
+    # InvokeOptionsFunctionPermission:
+    #   Type: AWS::Lambda::Permission
+    #   Properties:
+    #     Action: lambda:InvokeFunction
+    #     FunctionName: !Ref OptionsFunction
+    #     Principal: apigateway.amazonaws.com
 
     ApiKey:
       Type: AWS::ApiGateway::ApiKey
@@ -204,6 +225,7 @@ Resources:
 
     ListMethod:
       Type: AWS::ApiGateway::Method
+      DependsOn: InvokeListFunctionPermission
       Properties:
         ApiKeyRequired: true
         AuthorizationType: NONE
@@ -213,6 +235,18 @@ Resources:
           Type: AWS_PROXY
           Uri:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListRidesFunction.Arn}/invocations
+          IntegrationResponses:
+            - StatusCode: 200
+              # ResponseParameters:
+              #   method.response.header.Access-Control-Allow-Origin: integration.response.header.Access-Control-Allow-Origin
+        MethodResponses:
+          - StatusCode: 200
+            # ResponseParameters:
+            #   method.response.header.Access-Control-Allow-Origin: true
+            # ResponseModels:
+            #   application/json: Empty
+            ResponseModels:
+              application/json: Empty
         ResourceId: !Ref RidesCollection
         RestApiId: !Ref RideSharingApi
 
@@ -230,8 +264,51 @@ Resources:
           Type: AWS_PROXY
           Uri:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
+          IntegrationResponses:
+            - StatusCode: 200
+              # ResponseParameters:
+              #   method.response.header.Access-Control-Allow-Origin: integration.response.body.header.Access-Control-Allow-Origin
+          PassthroughBehavior: WHEN_NO_MATCH
+        MethodResponses:
+          - StatusCode: 200
+            # ResponseParameters:
+            #   method.response.header.Access-Control-Allow-Origin: true
+            ResponseModels:
+              application/json: Empty
         ResourceId: !Ref RidesCollection
         RestApiId: !Ref RideSharingApi
+
+    # CollectionOptionsMethod:
+    #   Type: AWS::ApiGateway::Method
+    #   Properties:
+    #     ApiKeyRequired: false
+    #     RestApiId: !Ref RideSharingApi
+    #     ResourceId: !Ref RidesCollection
+    #     HttpMethod: OPTIONS
+    #     AuthorizationType: NONE
+    #     Integration:
+    #       Type: AWS_PROXY
+    #       IntegrationHttpMethod: POST
+    #       Uri:
+    #         Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OptionsFunction.Arn}/invocations
+    #       IntegrationResponses:
+    #         - StatusCode: 200
+    #           ResponseParameters:
+    #             method.response.header.Access-Control-Allow-Headers: "integration.response.body.header.Access-Control-Allow-Headers"
+    #             method.response.header.Access-Control-Allow-Origin: "integration.response.body.header.Access-Control-Allow-Origin"
+    #             method.response.header.Access-Control-Allow-Methods: "integration.response.body.header.Access-Control-Allow-Methods"
+    #           ResponseTemplates:
+    #             application/json: '{"statusCode": "200"}'
+    #       PassthroughBehavior: WHEN_NO_MATCH
+    #     MethodResponses:
+    #       - StatusCode: 200
+    #         ResponseParameters:
+    #           method.response.header.Access-Control-Allow-Headers: true
+    #           method.response.header.Access-Control-Allow-Origin: true
+    #           method.response.header.Access-Control-Allow-Methods: true
+    #         ResponseModels:
+    #           application/json: Empty
+
 
     ReadMethod:
       Type: AWS::ApiGateway::Method
@@ -244,6 +321,16 @@ Resources:
           Type: AWS_PROXY
           Uri:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ReadRideFunction.Arn}/invocations
+          IntegrationResponses:
+            - StatusCode: 200
+              # ResponseParameters:
+              #   method.response.header.Access-Control-Allow-Origin: integration.response.body.header.Access-Control-Allow-Origin
+        MethodResponses:
+          - StatusCode: 200
+            # ResponseParameters:
+              # method.response.header.Access-Control-Allow-Origin: true
+            ResponseModels:
+              application/json: Empty
         ResourceId: !Ref Ride
         RestApiId: !Ref RideSharingApi
 
@@ -261,6 +348,16 @@ Resources:
           Type: AWS_PROXY
           Uri:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRideFunction.Arn}/invocations
+          IntegrationResponses:
+            - StatusCode: 200
+              # ResponseParameters:
+              #   method.response.header.Access-Control-Allow-Origin: integration.response.body.header.Access-Control-Allow-Origin
+        MethodResponses:
+          - StatusCode: 200
+            # ResponseParameters:
+            #   method.response.header.Access-Control-Allow-Origin: true
+            ResponseModels:
+              application/json: Empty
         ResourceId: !Ref Ride
         RestApiId: !Ref RideSharingApi
 
@@ -278,8 +375,62 @@ Resources:
           Type: AWS_PROXY
           Uri:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteRideFunction.Arn}/invocations
+          IntegrationResponses:
+            - StatusCode: 200
+              # ResponseParameters:
+              #   method.response.header.Access-Control-Allow-Origin: integration.response.body.header.Access-Control-Allow-Origin
+        MethodResponses:
+          - StatusCode: 200
+            # ResponseParameters:
+              # method.response.header.Access-Control-Allow-Origin: true
+            ResponseModels:
+              application/json: Empty
         ResourceId: !Ref Ride
         RestApiId: !Ref RideSharingApi
+
+    # RideOptionsMethod:
+    #   Type: AWS::ApiGateway::Method
+    #   Properties:
+    #     ApiKeyRequired: false
+    #     RestApiId: !Ref RideSharingApi
+    #     ResourceId: !Ref Ride
+    #     HttpMethod: OPTIONS
+    #     AuthorizationType: NONE
+    #     Integration:
+    #       Type: AWS_PROXY
+    #       IntegrationHttpMethod: POST
+    #       Uri:
+    #         Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OptionsFunction.Arn}/invocations
+    #   Type: AWS::ApiGateway::Method
+    #   Properties:
+    #     ApiKeyRequired: false
+    #     RestApiId: !Ref RideSharingApi
+    #     ResourceId: !Ref Ride
+    #     HttpMethod: OPTIONS
+    #     AuthorizationType: NONE
+    #     RequestParameters:
+    #       method.request.header.Access-Control-Request-Headers: true
+    #       method.request.header.Origin: true
+    #       method.request.header.Access-Control-Request-Method: true
+    #     Integration:
+    #       Type: MOCK
+    #       RequestParameters:
+    #         integration.request.header.Access-Control-Request-Headers: method.request.header.Access-Control-Request-Headers
+    #         integration.request.header.Origin: method.request.header.Origin
+    #         integration.request.header.Access-Control-Request-Method: method.request.header.Access-Control-Request-Method
+    #       IntegrationResponses:
+    #         - StatusCode: 200
+    #           ResponseParameters:
+    #             method.response.header.Access-Control-Allow-Headers: integration.response.header.Access-Control-Request-Headers
+    #             method.response.header.Access-Control-Allow-Origin: integration.response.header.Origin
+    #             method.response.header.Access-Control-Allow-Methods: integration.response.header.Access-Control-Request-Method
+    #       PassthroughBehavior: WHEN_NO_MATCH
+    #     MethodResponses:
+    #       - StatusCode: 200
+    #         ResponseParameters:
+    #           method.response.header.Access-Control-Allow-Headers: true
+    #           method.response.header.Access-Control-Allow-Origin: true
+    #           method.response.header.Access-Control-Allow-Methods: true
 
     Deployment:
       DependsOn:
@@ -288,6 +439,8 @@ Resources:
         - ReadMethod
         - UpdateMethod
         - DeleteMethod
+    #    - CollectionOptionsMethod
+    #    - RideOptionsMethod
       Type: AWS::ApiGateway::Deployment
       Properties:
         RestApiId: !Ref RideSharingApi

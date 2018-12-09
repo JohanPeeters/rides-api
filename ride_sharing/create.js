@@ -40,16 +40,17 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 exports.lambdaHandler = (event, context, callback) => {
   const item = event.body?JSON.parse(event.body):{}
   const id = uuidv1()
+  let result = {statusCode: 201}
+  result.headers = {
+    "Access-Control-Allow-Origin": "*"
+  }
   item.id = id
   dynamo.put({
       TableName: process.env.TABLE_NAME,
       Item: item
     }, (err, data) => {
       if (data) {
-        const result = {
-          statusCode: 201,
-          body: id
-        }
+        result.body = id
         callback(null, result)
       } else {
         callback(err, null)

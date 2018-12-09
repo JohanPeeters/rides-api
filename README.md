@@ -40,6 +40,7 @@ The generated API can be tested with the [assess-rest-api test client](https://g
     * scopes express permissions to perform actions on the API. The template configures various methods to  require the following scopes: `create`, `update` and `delete`. These scopes have to be added to the resource server. Note that the scope configuration on the API side concatenates the resource server identifier (`rides`) and the scope proper, e.g. `rides/update`, to form the scope string to be tested by the authorizer;
   * configure the test client to be allowed to request access tokens via the OAuth Client Credentials Grant. Make sure that the test client can request all access token scopes available - this should be `rides/create`, `rides/update` and `rides/delete`;
   * configure a domain for your user pool.
+* *CORS:* the commented-out `template.yaml` code returns all the correct CORS headers when the respective methods are queried with HTTPie. For reasons I do not understand since I mimic request parameters, these headers are not returned when XHR requests are launched in an SPA. At least, they are not when running the SPA in Chrome, the only browser I tested. For now, therefore, resources need to be CORS-enabled manually in the console.
 
 ## Setup process
 

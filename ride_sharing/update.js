@@ -40,15 +40,20 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
   const id = event.pathParameters.rideID
   const item = JSON.parse(event.body)
   item.id = id
+  let result = {
+    statusCode: 200
+  }
+  result.headers = {
+    "Access-Control-Allow_Origin": "*"
+  }
   dynamo.put({
       Item: item,
       TableName: process.env.TABLE_NAME
     }, (err, data) => {
-      if (data)
-        callback(null, {
-          statusCode: 200,
-          body: JSON.stringify(data.Item)
-        })
+      if (data) {
+        result.body = JSON.stringify(data.Item)
+        callback(null, result)
+      }
       if (err)
         callback(err, null)
   })

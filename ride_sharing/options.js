@@ -39,21 +39,9 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 exports.lambdaHandler = (event, context, callback) => {
     let result = {statusCode: 200}
     result.headers = {
-      "Access-Control-Allow-Origin": '*'
+      "Access-Control-Allow-Headers": event.headers['Access-Control-Request-Headers'],
+      "Access-Control-Allow-Methods": event.headers['Access-Control-Request-Method'],
+      "Access-Control-Allow-Origin": event.headers['Origin']
     }
-    dynamo.scan({
-      TableName: process.env.TABLE_NAME
-    }, (err, data) => {
-      if (data) {
-        result.body = JSON.stringify(data.Items)
-        callback(null, result)
-      }
-      else if (!err) {
-        result.body = JSON.stringify([])
-        callback(null, result)
-      }
-      else {
-        callback(err, null)
-      }
-    })
+    callback(null, result)
   }

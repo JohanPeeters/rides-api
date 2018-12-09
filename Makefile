@@ -6,4 +6,4 @@ packaged.yaml: ride_sharing/*.js ride_sharing/package.json template.yaml ride_sh
 	sam package --template-file template.yaml --output-template-file packaged.yaml --s3-bucket ride-sharing-api
 
 deploy: packaged.yaml
-	sam deploy --template-file packaged.yaml --stack-name rides --capabilities CAPABILITY_IAM
+	sam deploy --template-file packaged.yaml --stack-name ride-sharing --capabilities CAPABILITY_IAM
