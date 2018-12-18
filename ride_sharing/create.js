@@ -1,5 +1,6 @@
 const AWS = require('aws-sdk')
 const uuidv1 = require('uuid/v1')
+const jwt = require ('jsonwebtoken')
 
 const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 
@@ -40,11 +41,13 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 exports.lambdaHandler = (event, context, callback) => {
   const item = event.body?JSON.parse(event.body):{}
   const id = uuidv1()
+  item.id = id
+  const token = jwt.decode(event.headers.Authorization.slice(6).trim())
+  item.sub = token.sub
   let result = {statusCode: 201}
   result.headers = {
     "Access-Control-Allow-Origin": "*"
   }
-  item.id = id
   dynamo.put({
       TableName: process.env.TABLE_NAME,
       Item: item
