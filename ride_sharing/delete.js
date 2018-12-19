@@ -1,4 +1,5 @@
 const AWS = require('aws-sdk')
+const jwt = require ('jsonwebtoken')
 
 const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 
@@ -38,17 +39,33 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
  */
  exports.lambdaHandler = (event, context, callback) => {
   const id = event.pathParameters.rideID
+  const token = jwt.decode(event.headers.Authorization.slice(6).trim())
+  const user = token.sub
   let result = {statusCode: 200}
   result.headers = {
-    "Access-Control-Allow-Origin": "*"
+    "Access-Control-Allow-Origin": '*'
   }
   dynamo.delete({
       Key: {id: id},
-      TableName: process.env.TABLE_NAME
+      TableName: process.env.TABLE_NAME,
+      // access control logic - only let users delete their own rides
+      ConditionExpression: "#owner = :caller",
+      ExpressionAttributeValues: {
+        ":caller": user
+      },
+      // having to jump through hoops as sub is a reserved word in DynamoDB
+      ExpressionAttributeNames: {
+        "#owner": "sub"
+      }
     }, (err, data) => {
       if (data)
         callback(null, result)
-      if (err)
-        callback(err, null)
+      if (err) {
+        result.statusCode = 403
+        result.body = JSON.stringify({
+          message: 'users can only delete their own rides'
+        })
+        callback(null, result)
+      }
   })
 }

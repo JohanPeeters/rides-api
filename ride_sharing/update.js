@@ -1,4 +1,5 @@
 const AWS = require('aws-sdk')
+const jwt = require ('jsonwebtoken')
 
 const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 
@@ -40,21 +41,36 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
   const id = event.pathParameters.rideID
   const item = JSON.parse(event.body)
   item.id = id
+  const token = jwt.decode(event.headers.Authorization.slice(6).trim())
+  item.sub = token.sub
   let result = {
     statusCode: 200
   }
   result.headers = {
-    "Access-Control-Allow_Origin": "*"
+    "Access-Control-Allow-Origin": '*'
   }
   dynamo.put({
       Item: item,
-      TableName: process.env.TABLE_NAME
+      TableName: process.env.TABLE_NAME,
+      // access control logic - only let users update their own rides
+      ConditionExpression: "#owner = :caller",
+      ExpressionAttributeValues: {
+        ":caller": item.sub
+      },
+      // having to jump through hoops as sub is a reserved word in DynamoDB
+      ExpressionAttributeNames: {
+        "#owner": "sub"
+      }
     }, (err, data) => {
       if (data) {
-        result.body = JSON.stringify(data.Item)
+        result.body = JSON.stringify(data)
         callback(null, result)
       }
       if (err)
-        callback(err, null)
+        result.statusCode = 403
+        result.body = JSON.stringify({
+          message: err
+        })
+        callback(null, result)
   })
 }

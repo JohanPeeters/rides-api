@@ -350,12 +350,16 @@ Resources:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${UpdateRideFunction.Arn}/invocations
           IntegrationResponses:
             - StatusCode: 200
+            - StatusCode: 403
               # ResponseParameters:
               #   method.response.header.Access-Control-Allow-Origin: integration.response.body.header.Access-Control-Allow-Origin
         MethodResponses:
           - StatusCode: 200
             # ResponseParameters:
             #   method.response.header.Access-Control-Allow-Origin: true
+            ResponseModels:
+              application/json: Empty
+          - StatusCode: 403
             ResponseModels:
               application/json: Empty
         ResourceId: !Ref Ride
@@ -377,12 +381,12 @@ Resources:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${DeleteRideFunction.Arn}/invocations
           IntegrationResponses:
             - StatusCode: 200
-              # ResponseParameters:
-              #   method.response.header.Access-Control-Allow-Origin: integration.response.body.header.Access-Control-Allow-Origin
+            - StatusCode: 403
         MethodResponses:
           - StatusCode: 200
-            # ResponseParameters:
-              # method.response.header.Access-Control-Allow-Origin: true
+            ResponseModels:
+              application/json: Empty
+          - StatusCode: 403
             ResponseModels:
               application/json: Empty
         ResourceId: !Ref Ride
