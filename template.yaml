@@ -351,6 +351,7 @@ Resources:
           IntegrationResponses:
             - StatusCode: 200
             - StatusCode: 403
+            - StatusCode: 401
               # ResponseParameters:
               #   method.response.header.Access-Control-Allow-Origin: integration.response.body.header.Access-Control-Allow-Origin
         MethodResponses:
@@ -360,6 +361,9 @@ Resources:
             ResponseModels:
               application/json: Empty
           - StatusCode: 403
+            ResponseModels:
+              application/json: Empty
+          - StatusCode: 401
             ResponseModels:
               application/json: Empty
         ResourceId: !Ref Ride
@@ -382,11 +386,15 @@ Resources:
           IntegrationResponses:
             - StatusCode: 200
             - StatusCode: 403
+            - StatusCode: 401
         MethodResponses:
           - StatusCode: 200
             ResponseModels:
               application/json: Empty
           - StatusCode: 403
+            ResponseModels:
+              application/json: Empty
+          - StatusCode: 401
             ResponseModels:
               application/json: Empty
         ResourceId: !Ref Ride
