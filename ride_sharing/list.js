@@ -1,3 +1,4 @@
+
 const AWS = require('aws-sdk')
 
 const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
@@ -39,8 +40,8 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 exports.lambdaHandler = (event, context, callback) => {
     let result = {statusCode: 200}
     result.headers = {
-      "Access-Control-Allow-Origin": '*',
-      "Content-Type": 'application/vnd.api+json'
+      "Access-Control-Allow-Origin": '*'
+      // ,"Content-Type": 'application/vnd.api+json'
     }
     // we should be checking the Accept request header here - TODO
     dynamo.scan({
@@ -62,12 +63,10 @@ exports.lambdaHandler = (event, context, callback) => {
                 id: ride.sub
               }
             }
-          },
-          links: {
-            self: ride.id
           }
         }})
-        result.body = JSON.stringify({data: payload})
+        // payload based on JSON:API spec. Not used for now.
+        result.body = JSON.stringify(data.Items)
         callback(null, result)
       }
       else if (!err) {
