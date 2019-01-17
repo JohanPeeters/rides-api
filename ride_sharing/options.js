@@ -39,15 +39,18 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 exports.lambdaHandler = (event, context, callback) => {
     let result = {statusCode: 403}
     result.headers = {}
+    const ORIGIN = 'Origin'
+    const REQUEST_METHOD = 'Access-Control-Request-Method'
+    const REQUEST_HEADERS = 'Access-Control-Request-Headers'
     const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ride-sharing.tk']
     const allowedMethods = ['get', 'post', 'delete', 'put']
     const allowedHeaders = ['content-type', 'authorization', 'x-api-key']
-    let requestedOrigin = event.headers['Origin']
-    let requestedMethod = event.headers['Access-Control-Request-Method']
-    let requestedHeaders = event.headers['Access-Control-Request-Headers']
+    let requestedOrigin = event.headers[ORIGIN]
+    let requestedMethod = event.headers[REQUEST_METHOD]
+    let requestedHeaders = event.headers[REQUEST_HEADERS]
     if (!(requestedOrigin && requestedMethod && requestedHeaders)) {
       result.body = JSON.stringify({
-        message: `missing CORS request header or headers - ${JSON.stringify(event)}`
+        message: `missing CORS request header or headers`
       })
       callback(null, result)
       return
@@ -57,32 +60,21 @@ exports.lambdaHandler = (event, context, callback) => {
     requestedHeaders = requestedHeaders
                               .split(',')
                               .map(h => h.trim().toLowerCase())
-    if (!allowedOrigins.includes(event.headers['Origin'])) {
+    if (!allowedOrigins.includes(requestedOrigin)
+        || !allowedMethods.includes(requestedMethod)
+        || !requestedHeaders.every(requestedHeader => allowedHeaders.includes(requestedHeader))) {
       result.body = JSON.stringify({
-        message: `not an allowed origin`
+        message: `CORS not allowed`
       })
       callback(null, result)
       return
     }
-    if (!allowedMethods.includes(requestedMethod)) {
-        result.body = JSON.stringify({
-          message: `not an allowed method`
-        })
-        callback(null, result)
-        return
-    }
-    if (!requestedHeaders.every(requestedHeader => allowedHeaders.includes(requestedHeader))) {
-        result.body = JSON.stringify({
-          message: `not an allowed header`
-        })
-        callback(null, result)
-        return
-    }
     result.statusCode = 200
     result.headers = {
-      "Access-Control-Allow-Headers": event.headers['Access-Control-Request-Headers'],
-      "Access-Control-Allow-Methods": event.headers['Access-Control-Request-Method'],
-      "Access-Control-Allow-Origin": event.headers['Origin']
+      "Access-Control-Allow-Headers": event.headers[REQUEST_HEADERS],
+      "Access-Control-Allow-Methods": event.headers[REQUEST_METHOD],
+      "Access-Control-Allow-Origin": event.headers[ORIGIN],
+      "Access-Control-Max-Age": 600
     }
     callback(null, result)
   }

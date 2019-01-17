@@ -4,7 +4,7 @@ In this example, an access controlled API is set up with AWS Serverless Applicat
 
 AWS SAM is a set of AWS CloudFormation macros to declare serverless resources. Unfortunately the macros do not extend to security infrastructure, so most of the declared resources are vanilla CloudFormation.
 
-Below is a brief explanation of what is in this repo:
+Here is an overview of the content of this repo:
 
 ```
 .
@@ -25,13 +25,23 @@ Below is a brief explanation of what is in this repo:
 └── template.yaml               <-- SAM template
 ```
 
-## Requirements
+## Pre-requisites
 
 * [SAM CLI installed](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
 * AWS CLI configured with Administrator permission
 * [NodeJS 8.10+ installed](https://nodejs.org/en/download/)
 * [Docker installed](https://www.docker.com/community-edition)
 * make
+
+## Functions and their rationale
+
+### options
+
+The options lambda is named after the HTTP method that triggers it, `OPTIONS`. It is designed to respond to pre-flight CORS requests. So its main task is to inform the browser what it should do to protect the backend. A secondary goal is to leak as little information as possible about the constraints enforced by the backend. So the strategy is governed by a need-to-know policy. None of the CORS response headers are set if any of the requested features (origin, headers of method) are disallowed and requested features are reflected otherwise. This means that no information about acceptable features leaks until a call is attempted, forcing an attacker to work harder and make detection easier. `Access-Control-Expose-Headers` is never sent as the client has no need to know.
+
+The API does not accept any cookies so `Access-Control-Allow-Credentials` is never sent back.
+
+`Access-Control-Max-Age` of 600s affords performance optimization at negligible increased risk since the stack would need reconfiguration for CORS settings to change which requires human intervention.
 
 ## Limitations
 
