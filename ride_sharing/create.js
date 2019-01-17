@@ -39,6 +39,19 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
  *
  */
 exports.lambdaHandler = (event, context, callback) => {
+  const goodOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ridesharing.tk']
+  if (!event.headers['Origin'] || !goodOrigins.includes(event.headers['Origin'])) {
+    result.statusCode = 403
+    result.body = JSON.stringify({
+      message: 'not an allowed origin'
+    })
+    callback(null, result)
+    return
+  }
+  result.headers = {
+    "Access-Control-Allow-Origin": event.headers.Origin
+    // ,"Content-Type": 'application/vnd.api+json'
+  }
   const item = event.body?JSON.parse(event.body):{}
   const id = uuidv1()
   item.id = id

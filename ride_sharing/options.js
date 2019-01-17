@@ -38,6 +38,14 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
  */
 exports.lambdaHandler = (event, context, callback) => {
     let result = {statusCode: 200}
+    const goodOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ridesharing.tk']
+    if (!goodOrigins.includes(event.headers['Origin']) {
+      result.statusCode = 403
+      result.body = JSON.stringify({
+        message: `${event.headers.Origin} is not an allowed origin`
+      })
+      callback(result, null)
+    }
     result.headers = {
       "Access-Control-Allow-Headers": event.headers['Access-Control-Request-Headers'],
       "Access-Control-Allow-Methods": event.headers['Access-Control-Request-Method'],

@@ -92,7 +92,7 @@ Resources:
       Description: Backend ride sharing API generated with CloudFormation
       Properties:
         ApiKeySourceType: HEADER
-        Name: Ride sharing API
+        Name: Ride sharing
 
     ProdStage:
       Type: AWS::ApiGateway::Stage
@@ -111,8 +111,8 @@ Resources:
         Action: lambda:InvokeFunction
         FunctionName: !Ref ListRidesFunction
         Principal: apigateway.amazonaws.com
-        SourceArn:
-          Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}/*
+        # SourceArn:
+        #   Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}/*
 
     InvokeCreateFunctionPermission:
       Type: AWS::Lambda::Permission
@@ -153,17 +153,17 @@ Resources:
         # SourceArn:
         #   Fn::Sub: arn:aws:execute-api:${AWS::Region}:${AWS::AccountId}:${RideSharingApi}
 
-    # InvokeOptionsFunctionPermission:
-    #   Type: AWS::Lambda::Permission
-    #   Properties:
-    #     Action: lambda:InvokeFunction
-    #     FunctionName: !Ref OptionsFunction
-    #     Principal: apigateway.amazonaws.com
+    InvokeOptionsFunctionPermission:
+      Type: AWS::Lambda::Permission
+      Properties:
+        Action: lambda:InvokeFunction
+        FunctionName: !Ref OptionsFunction
+        Principal: apigateway.amazonaws.com
 
     ApiKey:
       Type: AWS::ApiGateway::ApiKey
       Properties:
-        Name: ride-sharing
+        Name: consumer-key
         Enabled: true
         StageKeys:
           - RestApiId: !Ref RideSharingApi
@@ -199,6 +199,13 @@ Resources:
         GenerateSecret: true
         UserPoolId: !Ref AuthZSrv
 
+    AppClient:
+      Type: AWS::Cognito::UserPoolClient
+      Properties:
+        ClientName: ride-sharing
+        GenerateSecret: false
+        UserPoolId: !Ref AuthZSrv
+
     Guard:
       Type: AWS::ApiGateway::Authorizer
       Properties:
@@ -225,7 +232,7 @@ Resources:
 
     ListMethod:
       Type: AWS::ApiGateway::Method
-      DependsOn: InvokeListFunctionPermission
+      # DependsOn: InvokeListFunctionPermission
       Properties:
         ApiKeyRequired: true
         AuthorizationType: NONE
@@ -237,14 +244,16 @@ Resources:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${ListRidesFunction.Arn}/invocations
           IntegrationResponses:
             - StatusCode: 200
-              # ResponseParameters:
-              #   method.response.header.Access-Control-Allow-Origin: integration.response.header.Access-Control-Allow-Origin
+              ResponseParameters:
+                method.response.header.Access-Control-Allow-Origin: integration.response.header.Access-Control-Allow-Origin
+            - StatusCode: 403
         MethodResponses:
           - StatusCode: 200
-            # ResponseParameters:
-            #   method.response.header.Access-Control-Allow-Origin: true
-            # ResponseModels:
-            #   application/json: Empty
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
+            ResponseModels:
+              application/json: Empty
+          - StatusCode: 403
             ResponseModels:
               application/json: Empty
         ResourceId: !Ref RidesCollection
@@ -266,10 +275,14 @@ Resources:
             Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${CreateRideFunction.Arn}/invocations
           IntegrationResponses:
             - StatusCode: 200
+              ResponseParameters:
+                method.response.header.Access-Control-Allow-Origin: integration.response.header.Access-Control-Allow-Origin
             - StatusCode: 403
             - StatusCode: 401
         MethodResponses:
           - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Origin: true
             ResponseModels:
               application/json: Empty
           - StatusCode: 403
@@ -281,36 +294,37 @@ Resources:
         ResourceId: !Ref RidesCollection
         RestApiId: !Ref RideSharingApi
 
-    # CollectionOptionsMethod:
-    #   Type: AWS::ApiGateway::Method
-    #   Properties:
-    #     ApiKeyRequired: false
-    #     RestApiId: !Ref RideSharingApi
-    #     ResourceId: !Ref RidesCollection
-    #     HttpMethod: OPTIONS
-    #     AuthorizationType: NONE
-    #     Integration:
-    #       Type: AWS_PROXY
-    #       IntegrationHttpMethod: POST
-    #       Uri:
-    #         Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OptionsFunction.Arn}/invocations
-    #       IntegrationResponses:
-    #         - StatusCode: 200
-    #           ResponseParameters:
-    #             method.response.header.Access-Control-Allow-Headers: "integration.response.body.header.Access-Control-Allow-Headers"
-    #             method.response.header.Access-Control-Allow-Origin: "integration.response.body.header.Access-Control-Allow-Origin"
-    #             method.response.header.Access-Control-Allow-Methods: "integration.response.body.header.Access-Control-Allow-Methods"
-    #           ResponseTemplates:
-    #             application/json: '{"statusCode": "200"}'
-    #       PassthroughBehavior: WHEN_NO_MATCH
-    #     MethodResponses:
-    #       - StatusCode: 200
-    #         ResponseParameters:
-    #           method.response.header.Access-Control-Allow-Headers: true
-    #           method.response.header.Access-Control-Allow-Origin: true
-    #           method.response.header.Access-Control-Allow-Methods: true
-    #         ResponseModels:
-    #           application/json: Empty
+    CollectionOptionsMethod:
+      Type: AWS::ApiGateway::Method
+      Properties:
+        ApiKeyRequired: false
+        RestApiId: !Ref RideSharingApi
+        ResourceId: !Ref RidesCollection
+        HttpMethod: OPTIONS
+        AuthorizationType: NONE
+        Integration:
+          Type: AWS_PROXY
+          IntegrationHttpMethod: POST
+          Uri:
+            Fn::Sub: arn:aws:apigateway:${AWS::Region}:lambda:path/2015-03-31/functions/${OptionsFunction.Arn}/invocations
+          IntegrationResponses:
+            - StatusCode: 200
+              ResponseParameters:
+                method.response.header.Access-Control-Allow-Headers: integration.response.header.Access-Control-Allow-Headers
+                method.response.header.Access-Control-Allow-Origin: integration.response.header.Access-Control-Allow-Origin
+                method.response.header.Access-Control-Allow-Methods: integration.response.header.Access-Control-Allow-Methods
+            - StatusCode: 403
+        MethodResponses:
+          - StatusCode: 200
+            ResponseParameters:
+              method.response.header.Access-Control-Allow-Headers: true
+              method.response.header.Access-Control-Allow-Origin: true
+              method.response.header.Access-Control-Allow-Methods: true
+            ResponseModels:
+              application/json: Empty
+          - StatusCode: 403
+            ResponseModels:
+              application/json: Empty
 
 
     ReadMethod:
@@ -454,7 +468,7 @@ Resources:
         - ReadMethod
         - UpdateMethod
         - DeleteMethod
-    #    - CollectionOptionsMethod
+        - CollectionOptionsMethod
     #    - RideOptionsMethod
       Type: AWS::ApiGateway::Deployment
       Properties:

@@ -1,6 +1,4 @@
-
 const AWS = require('aws-sdk')
-
 const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
 
 /**
@@ -39,11 +37,37 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
  */
 exports.lambdaHandler = (event, context, callback) => {
     let result = {statusCode: 200}
+    const goodOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ridesharing.tk']
+    if (!event.headers['Origin'] || !goodOrigins.includes(event.headers['Origin'])) {
+      result.statusCode = 403
+      result.body = JSON.stringify({
+        message: 'not an allowed origin'
+      })
+      callback(null, result)
+      return
+    }
     result.headers = {
-      "Access-Control-Allow-Origin": '*'
+      "Access-Control-Allow-Origin": event.headers.Origin
       // ,"Content-Type": 'application/vnd.api+json'
     }
     // we should be checking the Accept request header here - TODO
+    list((err, items) => {
+      if (items) {
+        result.body = JSON.stringify(items)
+        callback(null, result)
+        return
+      }
+      if (err) {
+        result.body = JSON.stringify({errors: [err]})
+        callback(result, null)
+        return
+      }
+      result.body = JSON.stringify({errors: []})
+      callback(null, result)
+    })
+  }
+
+  const list = (callback) => {
     dynamo.scan({
       TableName: process.env.TABLE_NAME
     }, (err, data) => {
@@ -66,16 +90,15 @@ exports.lambdaHandler = (event, context, callback) => {
           }
         }})
         // payload based on JSON:API spec. Not used for now.
-        result.body = JSON.stringify(data.Items)
-        callback(null, result)
+        callback(null, data.Items)
       }
-      else if (!err) {
-        result.body = JSON.stringify({errors: []})
-        callback(null, result)
+      else if (err) {
+        callback(err, null)
       }
       else {
-        result.body = JSON.stringify({errors: [err]})
-        callback(result, null)
+        callback(new Error('no rides, no error'), [])
       }
     })
   }
+
+  exports.list = list
