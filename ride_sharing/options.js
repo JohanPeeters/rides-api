@@ -37,15 +37,48 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
  *
  */
 exports.lambdaHandler = (event, context, callback) => {
-    let result = {statusCode: 200}
-    const goodOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ridesharing.tk']
-    if (!goodOrigins.includes(event.headers['Origin']) {
-      result.statusCode = 403
+    let result = {statusCode: 403}
+    result.headers = {}
+    const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ride-sharing.tk']
+    const allowedMethods = ['get', 'post', 'delete', 'put']
+    const allowedHeaders = ['content-type', 'authorization', 'x-api-key']
+    let requestedOrigin = event.headers['Origin']
+    let requestedMethod = event.headers['Access-Control-Request-Method']
+    let requestedHeaders = event.headers['Access-Control-Request-Headers']
+    if (!(requestedOrigin && requestedMethod && requestedHeaders)) {
       result.body = JSON.stringify({
-        message: `${event.headers.Origin} is not an allowed origin`
+        message: `missing CORS request header or headers - ${JSON.stringify(event)}`
       })
-      callback(result, null)
+      callback(null, result)
+      return
     }
+    requestedOrigin = requestedOrigin.trim().toLowerCase()
+    requestedMethod = requestedMethod.trim().toLowerCase()
+    requestedHeaders = requestedHeaders
+                              .split(',')
+                              .map(h => h.trim().toLowerCase())
+    if (!allowedOrigins.includes(event.headers['Origin'])) {
+      result.body = JSON.stringify({
+        message: `not an allowed origin`
+      })
+      callback(null, result)
+      return
+    }
+    if (!allowedMethods.includes(requestedMethod)) {
+        result.body = JSON.stringify({
+          message: `not an allowed method`
+        })
+        callback(null, result)
+        return
+    }
+    if (!requestedHeaders.every(requestedHeader => allowedHeaders.includes(requestedHeader))) {
+        result.body = JSON.stringify({
+          message: `not an allowed header`
+        })
+        callback(null, result)
+        return
+    }
+    result.statusCode = 200
     result.headers = {
       "Access-Control-Allow-Headers": event.headers['Access-Control-Request-Headers'],
       "Access-Control-Allow-Methods": event.headers['Access-Control-Request-Method'],
