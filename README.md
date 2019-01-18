@@ -59,6 +59,8 @@ If the `Origin` header in the request is not in the range of allowed origins, a 
   * configure the `ride-sharing` app client to request access tokens via the OAuth Authorization Flow Grant. Make sure that the client can request all access token scopes available - this should be `rides/create`, `rides/update` and `rides/delete`;
   * set the sign in and sign out URLs for your clients.
 * *CORS:* support for CORS is work-in-progress. The aim is to be as strict as possible with resources that can be shared, so no `Access-Control-Allow-Origin: *`. There is a proof of concept implementation for the `list` method. Also, the key `options` method has been implemented - see above. The other functions remain to be done.
+* *Input validation:* API Gateway can be configured to perform input validation on the data sent to the API. While this would be useful in the case of the `create` and `put` methods, this remains to be done.
+* *AWS WAF:* could be configured to provide further defense-in-depth. Since WAF pricing is fairly steep, I'm not sure that I want to do this.
 
 ## Setup process
 
