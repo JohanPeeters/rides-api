@@ -43,6 +43,12 @@ The API does not accept any cookies so `Access-Control-Allow-Credentials` is nev
 
 `Access-Control-Max-Age` of 600s affords performance optimization at negligible increased risk since the stack would need reconfiguration for CORS settings to change which requires human intervention.
 
+### list
+
+This method is triggered by a `GET` request on the rides collection. It does not take any parameters and returns up to 100 rides. These are not sorted and are not guaranteed to be the most recent ones - this is not a real-world application.
+
+If the `Origin` header in the request is not in the range of allowed origins, a 403 response is returned with no results. Otherwise, the 200 response includes the `Access-Control-Allow-Origin` header with the value in the request's `Origin` header.
+
 ## Limitations
 
 * *Authorizer:* `template.yaml` creates a Cognito User Pool called `riders`. It also creates an authorizer in the API that refers to the pool. Moreover, clients are created that can request tokens. One is called `test-client`, the other `ride-sharing`. The former is intended for test automation, the latter for a browser-based OAuth application. In order to start using the Cogito User Pool, the following remains to be done:
@@ -52,7 +58,7 @@ The API does not accept any cookies so `Access-Control-Allow-Credentials` is nev
   * configure the test client to be allowed to request access tokens via the OAuth Client Credentials Grant. Make sure that the test client can request all access token scopes available - this should be `rides/create`, `rides/update` and `rides/delete`;
   * configure the `ride-sharing` app client to request access tokens via the OAuth Authorization Flow Grant. Make sure that the client can request all access token scopes available - this should be `rides/create`, `rides/update` and `rides/delete`;
   * set the sign in and sign out URLs for your clients.
-* *CORS:* the commented-out `template.yaml` code returns all the correct CORS headers when the respective methods are queried with HTTPie. For reasons I do not understand since I mimic request parameters, these headers are not returned when XHR requests are launched in an SPA. At least, they are not when running the SPA in Chrome, the only browser I tested. For now, therefore, resources need to be CORS-enabled manually in the console.
+* *CORS:* support for CORS is work-in-progress. The aim is to be as strict as possible with resources that can be shared, so no `Access-Control-Allow-Origin: *`. There is a proof of concept implementation for the `list` method. Also, the key `options` method has been implemented - see above. The other functions remain to be done.
 
 ## Setup process
 

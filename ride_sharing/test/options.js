@@ -3,7 +3,7 @@ const handler = require('../options').lambdaHandler
 const expect = require('chai').expect
 
 const requestedOrigin = 'https://ride-sharing.tk'
-const requestedMethod = 'GET'
+const requestedMethod = 'get'
 const requestedHeaders = 'x-api-key'
 const ORIGIN_CORS_RESPONSE_HEADER = 'Access-Control-Allow-Origin'
 const METHODS_CORS_RESPONSE_HEADER = 'Access-Control-Allow-Methods'
@@ -50,11 +50,26 @@ describe('Options handler', () => {
         done()
       })
     })
+    it('returns CORS headers regardless of case in the header key', (done) => {
+      event.headers = {
+        'origin': requestedOrigin,
+        'access-control-request-methoD': requestedMethod,
+        'access-control-request-headers': requestedHeaders
+      }
+      handler(event, context, (err, result) => {
+        const headers = result.headers
+        expect(headers).to.have.property(ORIGIN_CORS_RESPONSE_HEADER)
+        expect(headers).to.have.property(METHODS_CORS_RESPONSE_HEADER)
+        expect(headers).to.have.property(HEADERS_CORS_RESPONSE_HEADER)
+        expect(result.statusCode).to.equal(200)
+        expect(err).to.be.null
+        done()
+      })
+    })
     it('returns CORS headers regardless of leading white space in the method', (done) => {
       event.headers['Access-Control-Request-Method'] = ' GET'
       handler(event, context, (err, result) => {
         const headers = result.headers
-        expect(result).not.to.be.null
         expect(headers).to.have.property(ORIGIN_CORS_RESPONSE_HEADER)
         expect(headers).to.have.property(METHODS_CORS_RESPONSE_HEADER)
         expect(headers).to.have.property(HEADERS_CORS_RESPONSE_HEADER)
@@ -65,8 +80,8 @@ describe('Options handler', () => {
     })
   })
   describe('if the Origin header is missing in the request', () => {
-    it('does not include the ORIGIN_CORS_RESPONSE_HEADER header in the response ', (done) => {
-      event.headers.Origin = undefined
+    it('does not include the Access-Control-Allow-Origin header in the response ', (done) => {
+      delete event.headers.Origin
       const context = null
       handler(event, context, (err, result) => {
         expect(result).not.to.be.null

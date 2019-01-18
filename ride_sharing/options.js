@@ -37,44 +37,48 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
  *
  */
 exports.lambdaHandler = (event, context, callback) => {
-    let result = {statusCode: 403}
-    result.headers = {}
-    const ORIGIN = 'Origin'
-    const REQUEST_METHOD = 'Access-Control-Request-Method'
-    const REQUEST_HEADERS = 'Access-Control-Request-Headers'
-    const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ride-sharing.tk']
-    const allowedMethods = ['get', 'post', 'delete', 'put']
-    const allowedHeaders = ['content-type', 'authorization', 'x-api-key']
-    let requestedOrigin = event.headers[ORIGIN]
-    let requestedMethod = event.headers[REQUEST_METHOD]
-    let requestedHeaders = event.headers[REQUEST_HEADERS]
-    if (!(requestedOrigin && requestedMethod && requestedHeaders)) {
-      result.body = JSON.stringify({
-        message: `missing CORS request header or headers`
-      })
-      callback(null, result)
-      return
-    }
-    requestedOrigin = requestedOrigin.trim().toLowerCase()
-    requestedMethod = requestedMethod.trim().toLowerCase()
-    requestedHeaders = requestedHeaders
-                              .split(',')
-                              .map(h => h.trim().toLowerCase())
-    if (!allowedOrigins.includes(requestedOrigin)
-        || !allowedMethods.includes(requestedMethod)
-        || !requestedHeaders.every(requestedHeader => allowedHeaders.includes(requestedHeader))) {
-      result.body = JSON.stringify({
-        message: `CORS not allowed`
-      })
-      callback(null, result)
-      return
-    }
-    result.statusCode = 200
-    result.headers = {
-      "Access-Control-Allow-Headers": event.headers[REQUEST_HEADERS],
-      "Access-Control-Allow-Methods": event.headers[REQUEST_METHOD],
-      "Access-Control-Allow-Origin": event.headers[ORIGIN],
-      "Access-Control-Max-Age": 600
-    }
-    callback(null, result)
+  let result = {statusCode: 403}
+  result.headers = {}
+  const ORIGIN = 'origin'
+  const REQUEST_METHOD = 'access-control-request-method'
+  const REQUEST_HEADERS = 'access-control-request-headers'
+  const allowedOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ride-sharing.tk']
+  const allowedMethods = ['get', 'post', 'delete', 'put']
+  const allowedHeaders = ['content-type', 'authorization', 'x-api-key']
+  const headers = {}
+  for (const key in event.headers) {
+    headers[key.toLowerCase()] = event.headers[key].trim().toLowerCase()
   }
+  let requestedOrigin = headers[ORIGIN]
+  let requestedMethod = headers[REQUEST_METHOD]
+  let requestedHeaders = headers[REQUEST_HEADERS]
+  if (!(requestedOrigin && requestedMethod && requestedHeaders)) {
+    result.body = JSON.stringify({
+      message: `missing CORS request header or headers`
+    })
+    callback(null, result)
+    return
+  }
+  requestedOrigin = requestedOrigin
+  requestedMethod = requestedMethod
+  requestedHeaders = requestedHeaders
+                            .split(',')
+                            .map(h => h.trim().toLowerCase())
+  if (!allowedOrigins.includes(requestedOrigin)
+      || !allowedMethods.includes(requestedMethod)
+      || !requestedHeaders.every(requestedHeader => allowedHeaders.includes(requestedHeader))) {
+    result.body = JSON.stringify({
+      message: `CORS not allowed`
+    })
+    callback(null, result)
+    return
+  }
+  result.statusCode = 200
+  result.headers = {
+    "Access-Control-Allow-Headers": headers[REQUEST_HEADERS],
+    "Access-Control-Allow-Methods": headers[REQUEST_METHOD],
+    "Access-Control-Allow-Origin": headers[ORIGIN],
+    "Access-Control-Max-Age": 600
+  }
+  callback(null, result)
+}

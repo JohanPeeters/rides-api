@@ -37,8 +37,13 @@ const dynamo = new AWS.DynamoDB.DocumentClient({apiVersion: '2012-08-10'})
  */
 exports.lambdaHandler = (event, context, callback) => {
     let result = {statusCode: 200}
-    const goodOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ridesharing.tk']
-    if (!event.headers['Origin'] || !goodOrigins.includes(event.headers['Origin'])) {
+    const goodOrigins = ['http://localhost:3000', 'https://localhost:3000', 'https://ride-sharing.tk']
+    const headers = {}
+    for (const key in event.headers) {
+      headers[key.toLowerCase()] = event.headers[key].trim().toLowerCase()
+    }
+    const requestedOrigin = headers.origin
+    if (!requestedOrigin || !goodOrigins.includes(requestedOrigin)) {
       result.statusCode = 403
       result.body = JSON.stringify({
         message: 'not an allowed origin'
@@ -47,7 +52,7 @@ exports.lambdaHandler = (event, context, callback) => {
       return
     }
     result.headers = {
-      "Access-Control-Allow-Origin": event.headers.Origin
+      "Access-Control-Allow-Origin": requestedOrigin
       // ,"Content-Type": 'application/vnd.api+json'
     }
     // we should be checking the Accept request header here - TODO
@@ -69,7 +74,8 @@ exports.lambdaHandler = (event, context, callback) => {
 
   const list = (callback) => {
     dynamo.scan({
-      TableName: process.env.TABLE_NAME
+      TableName: process.env.TABLE_NAME,
+      Limit: 100
     }, (err, data) => {
       if (data) {
         const payload = data.Items.map(ride => {return {
