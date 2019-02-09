@@ -33,6 +33,23 @@ Here is an overview of the content of this repo:
 * [Docker installed](https://www.docker.com/community-edition)
 * make
 
+## Pre-requisites for a Windows environment
+The following provide instructions how you can fulfill the requirements mentioned above on a Windows system.
+* https://docs.aws.amazon.com/cli/latest/userguide/install-windows.html#install-msi-on-windows 
+* https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install-windows.html
+* MinGW with base MSYS package added to your PATH
+* modify the --s3-bucket parameter in the makefile to point to your (manually) created S3 bucket
+* Make sure you have set up logging (you'll have to create a dummy API GW for that): https://docs.aws.amazon.com/apigateway/latest/developerguide/set-up-logging.html 
+
+`copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe`  
+`copy c:\MinGW\bin\mingw32-make.exe c:\MinGW\bin\make.exe`  
+
+## Getting started
+`git clone https://github.com/JohanPeeters/rides-api.git`  
+`cd rides-api`
+`aws configure`  
+`make deploy`
+
 ## Functions and their rationale
 
 ### options
@@ -61,15 +78,6 @@ If the `Origin` header in the request is not in the range of allowed origins, a 
 * *CORS:* support for CORS is work-in-progress. The aim is to be as strict as possible with resources that can be shared, so no `Access-Control-Allow-Origin: *`. There is a proof of concept implementation for the `list` method. Also, the key `options` method has been implemented - see above. The other functions remain to be done.
 * *Input validation:* API Gateway can be configured to perform input validation on the data sent to the API. While this would be useful in the case of the `create` and `put` methods, this remains to be done.
 * *AWS WAF:* could be configured to provide further defense-in-depth. Since WAF pricing is fairly steep, I'm not sure that I want to do this.
-
-## Setup process
-
-### Packaging and deployment
-
-Use the `deploy` `make` target:
-```
-$ make deploy
-```
 
 ### Manual tweaks
 
